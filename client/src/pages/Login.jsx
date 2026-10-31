@@ -58,7 +58,8 @@ export default function Login() {
     dispatch(clearError());
     if (!validate()) return;
 
-    const res = await dispatch(loginUser({ email, password }));
+    const cleanEmail = email.trim().toLowerCase();
+    const res = await dispatch(loginUser({ email: cleanEmail, password }));
     if (!res.error) {
       const role = res.payload.user?.role;
       if (role === 'HR') navigate('/hr/dashboard');
