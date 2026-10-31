@@ -99,6 +99,60 @@ async function runSmokeTests() {
     });
     assert(hrRouteHr.status === 200, 'HR token accepted on HR-only route with 200');
 
+    // ==========================================
+    // STEP 5 ASSERTIONS: EMPLOYEES & MANAGERS
+    // ==========================================
+
+    // 8. Employee cannot list all employees (403)
+    const empListForbidden = await fetch(`${BASE}/employees`, {
+      headers: { Authorization: `Bearer ${emp1Data.token}` }
+    });
+    assert(empListForbidden.status === 403, 'Employee cannot list all employees (returns 403)');
+
+    // 9. HR lists employees with pagination metadata
+    const hrEmpList = await fetch(`${BASE}/employees?page=1&limit=2`, {
+      headers: { Authorization: `Bearer ${hrData.token}` }
+    });
+    const hrEmpListData = await hrEmpList.json();
+    assert(
+      hrEmpList.status === 200 &&
+      hrEmpListData.page === 1 &&
+      typeof hrEmpListData.pages === 'number' &&
+      typeof hrEmpListData.total === 'number' &&
+      Array.isArray(hrEmpListData.data),
+      'HR lists employees with correct pagination metadata (page, pages, total, data)'
+    );
+
+    // 10. Employee cannot change role via profile update
+    const roleTamperAttempt = await fetch(`${BASE}/employees/profile/me`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${emp1Data.token}`
+      },
+      body: JSON.stringify({ role: 'HR', phone: '+1-555-9999' })
+    });
+    const roleTamperData = await roleTamperAttempt.json();
+    assert(
+      roleTamperAttempt.status === 200 &&
+      roleTamperData.data.user.role === 'Employee' &&
+      roleTamperData.data.phone === '+1-555-9999',
+      'Employee profile update updates phone but ignores role tampering (remains Employee)'
+    );
+
+    // 11. Manager only sees own team
+    const mgrTeamRes = await fetch(`${BASE}/managers/team`, {
+      headers: { Authorization: `Bearer ${mgrData.token}` }
+    });
+    const mgrTeamData = await mgrTeamRes.json();
+    assert(
+      mgrTeamRes.status === 200 &&
+      Array.isArray(mgrTeamData.data) &&
+      mgrTeamData.data.length === 2 &&
+      mgrTeamData.data.every(e => e.department === 'Engineering'),
+      'Manager only sees own team members on /api/managers/team'
+    );
+
     console.log(`\nSmoke Tests Complete: ${passed}/${assertions} assertions passed.`);
     await tearDown();
     if (passed === assertions) {
