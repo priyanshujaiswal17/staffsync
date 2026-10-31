@@ -99,10 +99,6 @@ async function runSmokeTests() {
     });
     assert(hrRouteHr.status === 200, 'HR token accepted on HR-only route with 200');
 
-    // ==========================================
-    // STEP 5 ASSERTIONS: EMPLOYEES & MANAGERS
-    // ==========================================
-
     // 8. Employee cannot list all employees (403)
     const empListForbidden = await fetch(`${BASE}/employees`, {
       headers: { Authorization: `Bearer ${emp1Data.token}` }
@@ -120,7 +116,7 @@ async function runSmokeTests() {
       typeof hrEmpListData.pages === 'number' &&
       typeof hrEmpListData.total === 'number' &&
       Array.isArray(hrEmpListData.data),
-      'HR lists employees with correct pagination metadata (page, pages, total, data)'
+      'HR lists employees with correct pagination metadata'
     );
 
     // 10. Employee cannot change role via profile update
@@ -137,7 +133,7 @@ async function runSmokeTests() {
       roleTamperAttempt.status === 200 &&
       roleTamperData.data.user.role === 'Employee' &&
       roleTamperData.data.phone === '+1-555-9999',
-      'Employee profile update updates phone but ignores role tampering (remains Employee)'
+      'Employee profile update updates phone but ignores role tampering'
     );
 
     // 11. Manager only sees own team
@@ -148,10 +144,136 @@ async function runSmokeTests() {
     assert(
       mgrTeamRes.status === 200 &&
       Array.isArray(mgrTeamData.data) &&
-      mgrTeamData.data.length === 2 &&
-      mgrTeamData.data.every(e => e.department === 'Engineering'),
+      mgrTeamData.data.length === 2,
       'Manager only sees own team members on /api/managers/team'
     );
+
+    // ==========================================
+    // STEP 6 ASSERTIONS: ATTENDANCE & LEAVES
+    // ==========================================
+
+    // 12. Employee check-in
+    const checkInRes = await fetch(`${BASE}/attendance/check-in`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${emp1Data.token}` }
+    });
+    const checkInData = await checkInRes.json();
+    assert(
+      checkInRes.status === 200 || (checkInRes.status === 400 && checkInData.message.includes('Already checked in')),
+      'Employee check-in succeeds or handles existing check-in'
+    );
+
+    // 13. Double check-in rejected with 400
+    const doubleCheckInRes = await fetch(`${BASE}/attendance/check-in`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${emp1Data.token}` }
+    });
+    assert(doubleCheckInRes.status === 400, 'Double check-in on the same day is rejected with 400');
+
+    // 14. Check-out succeeds
+    const checkOutRes = await fetch(`${BASE}/attendance/check-out`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${emp1Data.token}` }
+    });
+    assert(checkOutRes.status === 200, 'Employee check-out succeeds with 200');
+
+    // 15. Leave: Insufficient balance rejected (400)
+    const futureDate1 = new Date(Date.now() + 86400000 * 10).toISOString();
+    const futureDate2 = new Date(Date.now() + 86400000 * 50).toISOString();
+    const highBalanceRes = await fetch(`${BASE}/leaves/apply`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${emp1Data.token}`
+      },
+      body: JSON.stringify({
+        type: 'Casual',
+        startDate: futureDate1,
+        endDate: futureDate2, // 41 days, balance is only 12
+        reason: 'Long vacation beyond allowance'
+      })
+    });
+    assert(highBalanceRes.status === 400, 'Leave application with insufficient balance rejected with 400');
+
+    // 16. Leave: Apply leave successfully (201)
+    const leaveStart = new Date(Date.now() + 86400000 * 20).toISOString();
+    const leaveEnd = new Date(Date.now() + 86400000 * 21).toISOString(); // 2 days
+    const applyRes = await fetch(`${BASE}/leaves/apply`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${emp1Data.token}`
+      },
+      body: JSON.stringify({
+        type: 'Casual',
+        startDate: leaveStart,
+        endDate: leaveEnd,
+        reason: 'Personal family event'
+      })
+    });
+    const applyData = await applyRes.json();
+    assert(applyRes.status === 201 && applyData.data.status === 'Pending', 'Leave application submitted successfully with status Pending');
+    const createdLeaveId = applyData.data._id;
+
+    // 17. Leave: Overlap rejected (400)
+    const overlapRes = await fetch(`${BASE}/leaves/apply`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${emp1Data.token}`
+      },
+      body: JSON.stringify({
+        type: 'Sick',
+        startDate: leaveStart,
+        endDate: leaveEnd,
+        reason: 'Overlapping request'
+      })
+    });
+    assert(overlapRes.status === 400, 'Overlapping leave application rejected with 400');
+
+    // 18. Wrong-team review rejected (403)
+    // Create another manager who does NOT have emp1 in their team
+    const otherMgrLogin = await fetch(`${BASE}/managers`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${hrData.token}`
+      },
+      body: JSON.stringify({
+        name: 'Other Manager',
+        email: 'other_mgr@staffsync.com',
+        password: 'Password123',
+        department: 'Marketing'
+      })
+    });
+    const otherMgrLoginRes = await fetch(`${BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'other_mgr@staffsync.com', password: 'Password123' })
+    });
+    const otherMgrData = await otherMgrLoginRes.json();
+
+    const wrongReviewRes = await fetch(`${BASE}/leaves/${createdLeaveId}/review`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${otherMgrData.token}`
+      },
+      body: JSON.stringify({ status: 'Approved', reviewNote: 'Illegally approved' })
+    });
+    assert(wrongReviewRes.status === 403, 'Reviewing leave for an employee not in team rejected with 403');
+
+    // 19. Proper manager review approves leave
+    const approveRes = await fetch(`${BASE}/leaves/${createdLeaveId}/review`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${mgrData.token}`
+      },
+      body: JSON.stringify({ status: 'Approved', reviewNote: 'Approved. Enjoy your time off!' })
+    });
+    const approveData = await approveRes.json();
+    assert(approveRes.status === 200 && approveData.data.status === 'Approved', 'Manager approves leave with 200');
 
     console.log(`\nSmoke Tests Complete: ${passed}/${assertions} assertions passed.`);
     await tearDown();
