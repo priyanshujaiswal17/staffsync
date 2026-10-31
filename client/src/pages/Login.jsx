@@ -13,6 +13,32 @@ export default function Login() {
   const navigate = useNavigate();
   const { loading, error } = useSelector((state) => state.auth);
 
+  const handleDemoLogin = async (demoEmail, demoPassword) => {
+    setEmail(demoEmail);
+    setPassword(demoPassword);
+    setClientErrors({});
+    dispatch(clearError());
+    const res = await dispatch(loginUser({ email: demoEmail, password: demoPassword }));
+    if (!res.error) {
+      const role = res.payload.user?.role;
+      if (role === 'HR') navigate('/hr/dashboard');
+      else if (role === 'Manager') navigate('/manager/dashboard');
+      else navigate('/employee/dashboard');
+    }
+  };
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const demo = params.get('demo');
+    if (demo === 'admin' || demo === 'hr') {
+      handleDemoLogin('admin@staffsync.com', 'Password123');
+    } else if (demo === 'manager') {
+      handleDemoLogin('manager@staffsync.com', 'Password123');
+    } else if (demo === 'employee') {
+      handleDemoLogin('emp1@staffsync.com', 'Password123');
+    }
+  }, []);
+
   const validate = () => {
     const errs = {};
     if (!email) {
@@ -46,15 +72,84 @@ export default function Login() {
       {/* Left Form Column */}
       <div className="d-flex flex-column justify-content-between p-4 p-md-5 col-12 col-lg-6 col-xl-5">
         <div>
-          <Link to="/" className="d-flex align-items-center gap-2 fw-bold text-primary fs-4 text-decoration-none mb-5">
+          <Link to="/" className="d-flex align-items-center gap-2 fw-bold text-primary fs-4 text-decoration-none mb-4">
             <i className="bi bi-stack"></i>
             <span>StaffSync</span>
           </Link>
         </div>
 
-        <div className="mx-auto w-100" style={{ maxWidth: 380 }}>
+        <div className="mx-auto w-100" style={{ maxWidth: 420 }}>
           <h2 className="fs-3 fw-bold text-dark mb-1">Sign in to your account</h2>
-          <p className="text-secondary small mb-4">Enter your credentials to access your organization portal.</p>
+          <p className="text-secondary small mb-3">Enter your credentials or choose a 1-click demo role below.</p>
+
+          {/* Quick 1-Click Demo Section */}
+          <div className="card p-3 border-primary-subtle bg-primary-subtle bg-opacity-25 shadow-sm mb-4">
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <span className="fw-semibold text-primary small d-flex align-items-center gap-1.5">
+                <i className="bi bi-lightning-charge-fill text-warning"></i> 1-Click Instant Demo Access
+              </span>
+              <span className="badge bg-primary text-white" style={{ fontSize: 9 }}>No Signup Needed</span>
+            </div>
+            <p className="text-secondary" style={{ fontSize: 11, marginBottom: 10 }}>
+              Click any role to sign in instantly with demo data:
+            </p>
+            <div className="d-grid gap-2">
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-between bg-white text-dark py-1.5 px-3"
+                onClick={() => handleDemoLogin('admin@staffsync.com', 'Password123')}
+                disabled={loading}
+              >
+                <div className="d-flex align-items-center gap-2">
+                  <i className="bi bi-shield-check text-primary"></i>
+                  <div className="text-start">
+                    <div className="fw-semibold" style={{ fontSize: 12 }}>Admin / HR Portal</div>
+                    <div className="text-muted" style={{ fontSize: 10 }}>admin@staffsync.com</div>
+                  </div>
+                </div>
+                <span className="badge bg-primary-subtle text-primary" style={{ fontSize: 10 }}>Explore &rarr;</span>
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-between bg-white text-dark py-1.5 px-3"
+                onClick={() => handleDemoLogin('manager@staffsync.com', 'Password123')}
+                disabled={loading}
+              >
+                <div className="d-flex align-items-center gap-2">
+                  <i className="bi bi-people text-warning"></i>
+                  <div className="text-start">
+                    <div className="fw-semibold" style={{ fontSize: 12 }}>Manager Suite</div>
+                    <div className="text-muted" style={{ fontSize: 10 }}>manager@staffsync.com</div>
+                  </div>
+                </div>
+                <span className="badge bg-secondary-subtle text-secondary" style={{ fontSize: 10 }}>Explore &rarr;</span>
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-between bg-white text-dark py-1.5 px-3"
+                onClick={() => handleDemoLogin('emp1@staffsync.com', 'Password123')}
+                disabled={loading}
+              >
+                <div className="d-flex align-items-center gap-2">
+                  <i className="bi bi-person text-success"></i>
+                  <div className="text-start">
+                    <div className="fw-semibold" style={{ fontSize: 12 }}>Employee Self-Service</div>
+                    <div className="text-muted" style={{ fontSize: 10 }}>emp1@staffsync.com</div>
+                  </div>
+                </div>
+                <span className="badge bg-secondary-subtle text-secondary" style={{ fontSize: 10 }}>Explore &rarr;</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="position-relative text-center my-3">
+            <hr className="text-muted" />
+            <span className="position-absolute top-50 start-50 translate-middle bg-white px-2 text-muted small" style={{ fontSize: 11 }}>
+              or enter credentials manually
+            </span>
+          </div>
 
           {error && (
             <div className="alert alert-danger py-2 px-3 small d-flex align-items-center gap-2 mb-3" role="alert">
@@ -114,7 +209,7 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="text-center mt-4 text-secondary small">
+          <div className="text-center mt-3 text-secondary small">
             Don't have an account?{' '}
             <Link to="/register" className="text-primary fw-semibold text-decoration-none">
               Register employee account

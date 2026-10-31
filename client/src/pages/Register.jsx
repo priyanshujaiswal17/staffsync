@@ -59,7 +59,17 @@ export default function Register() {
 
         <div className="mx-auto w-100" style={{ maxWidth: 380 }}>
           <h2 className="fs-3 fw-bold text-dark mb-1">Create an employee account</h2>
-          <p className="text-secondary small mb-4">Join your team workspace and access your self-service portal.</p>
+          <p className="text-secondary small mb-3">Join your team workspace and access your self-service portal.</p>
+
+          {/* Quick Demo Access Callout */}
+          <div className="card p-2.5 border-primary-subtle bg-primary-subtle bg-opacity-25 mb-3 text-center">
+            <div className="small fw-semibold text-primary mb-1">
+              <i className="bi bi-lightning-charge-fill text-warning me-1"></i> Want to test without registering?
+            </div>
+            <Link to="/login" className="btn btn-sm btn-primary py-1 px-3 fw-medium">
+              Use 1-Click Demo Logins &rarr;
+            </Link>
+          </div>
 
           {error && (
             <div className="alert alert-danger py-2 px-3 small d-flex align-items-center gap-2 mb-3" role="alert">

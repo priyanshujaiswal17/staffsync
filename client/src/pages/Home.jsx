@@ -47,22 +47,42 @@ export default function Home() {
           <p className="lead text-secondary mb-4">
             StaffSync delivers a fast, unified operating system designed specifically for HR leaders, managers, and growing teams.
           </p>
-          <div className="d-flex justify-content-center gap-3">
+          <div className="d-flex flex-wrap justify-content-center gap-3 mb-4">
             {isAuthenticated ? (
               <Link to={getDashboardRoute()} className="btn btn-primary btn-lg px-4">
                 Go to Dashboard
               </Link>
             ) : (
               <>
-                <Link to="/register" className="btn btn-primary btn-lg px-4">
-                  Create Employee Account
+                <Link to="/login" className="btn btn-primary btn-lg px-4">
+                  Sign In / Demo Access
                 </Link>
-                <Link to="/login" className="btn btn-outline-secondary btn-lg px-4">
-                  Sign In
+                <Link to="/register" className="btn btn-outline-secondary btn-lg px-4">
+                  Create Employee Account
                 </Link>
               </>
             )}
           </div>
+
+          {!isAuthenticated && (
+            <div className="card p-3 border-1 bg-light shadow-sm text-center mx-auto" style={{ maxWidth: 620 }}>
+              <div className="small fw-semibold text-dark mb-2 d-flex align-items-center justify-content-center gap-1.5">
+                <i className="bi bi-lightning-charge-fill text-warning"></i>
+                <span>1-Click Instant Demo Portals (Explore without signing up):</span>
+              </div>
+              <div className="d-flex flex-wrap justify-content-center gap-2">
+                <Link to="/login?demo=admin" className="btn btn-sm btn-white border bg-white text-primary fw-medium px-3">
+                  <i className="bi bi-shield-check me-1"></i> Admin Portal
+                </Link>
+                <Link to="/login?demo=manager" className="btn btn-sm btn-white border bg-white text-dark fw-medium px-3">
+                  <i className="bi bi-people me-1 text-warning"></i> Manager Suite
+                </Link>
+                <Link to="/login?demo=employee" className="btn btn-sm btn-white border bg-white text-dark fw-medium px-3">
+                  <i className="bi bi-person me-1 text-success"></i> Employee Portal
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
