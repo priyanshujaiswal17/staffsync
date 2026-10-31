@@ -106,6 +106,10 @@ const seed = async () => {
         leaveBalance: { casual: 12, sick: 10, annual: 15 },
         status: 'Active'
       });
+    } else {
+      emp1Profile.leaveBalance = { casual: 12, sick: 10, annual: 15 };
+      await emp1Profile.save();
+      await Leave.deleteMany({ employee: emp1Profile._id, reason: 'Personal family event' });
     }
 
     // Employee 2
@@ -133,6 +137,9 @@ const seed = async () => {
         leaveBalance: { casual: 12, sick: 10, annual: 15 },
         status: 'Active'
       });
+    } else {
+      emp2Profile.leaveBalance = { casual: 12, sick: 10, annual: 15 };
+      await emp2Profile.save();
     }
 
     // Employee 3 (Product & Design)
