@@ -24,6 +24,42 @@ router.get('/profile/me', verifyToken, async (req, res, next) => {
       .lean();
 
     if (!employee) {
+      const manager = await Manager.findOne({ user: req.user._id }).populate('user', 'name email role isActive').lean();
+      if (manager) {
+        return res.status(200).json({
+          success: true,
+          data: {
+            _id: manager._id,
+            user: manager.user,
+            employeeId: 'MGR-' + req.user._id.toString().slice(-4).toUpperCase(),
+            department: manager.department,
+            designation: 'Department Manager',
+            phone: '',
+            address: '',
+            status: 'Active',
+            leaveBalance: { casual: 12, sick: 10, annual: 15 }
+          }
+        });
+      }
+
+      const user = await User.findById(req.user._id).select('name email role isActive').lean();
+      if (user) {
+        return res.status(200).json({
+          success: true,
+          data: {
+            _id: user._id,
+            user,
+            employeeId: 'HR-' + user._id.toString().slice(-4).toUpperCase(),
+            department: 'Human Resources',
+            designation: user.role === 'HR' ? 'HR Administrator' : 'Staff Member',
+            phone: '',
+            address: '',
+            status: 'Active',
+            leaveBalance: { casual: 12, sick: 10, annual: 15 }
+          }
+        });
+      }
+
       return res.status(404).json({
         success: false,
         message: 'Employee profile not found'
@@ -49,11 +85,26 @@ router.put('/profile/me', [
   validate
 ], async (req, res, next) => {
   try {
-    const employee = await Employee.findOne({ user: req.user._id });
+    let employee = await Employee.findOne({ user: req.user._id });
     if (!employee) {
-      return res.status(404).json({
-        success: false,
-        message: 'Employee profile not found'
+      const { name } = req.body;
+      if (name) {
+        await User.findByIdAndUpdate(req.user._id, { name });
+      }
+      const updatedUser = await User.findById(req.user._id).select('name email role isActive').lean();
+      return res.status(200).json({
+        success: true,
+        data: {
+          _id: req.user._id,
+          user: updatedUser,
+          employeeId: (req.user.role === 'Manager' ? 'MGR-' : 'HR-') + req.user._id.toString().slice(-4).toUpperCase(),
+          department: req.user.role === 'Manager' ? 'Management' : 'Human Resources',
+          designation: req.user.role === 'Manager' ? 'Department Manager' : 'HR Administrator',
+          phone: req.body.phone || '',
+          address: req.body.address || '',
+          status: 'Active',
+          leaveBalance: { casual: 12, sick: 10, annual: 15 }
+        }
       });
     }
 

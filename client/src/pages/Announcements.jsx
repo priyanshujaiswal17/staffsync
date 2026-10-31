@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { fetchAnnouncements, createAnnouncement, deleteAnnouncement } from '../store/announcementsSlice';
+import { fetchAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement } from '../store/announcementsSlice';
 import Skeleton from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
 
@@ -17,6 +17,16 @@ export default function Announcements() {
     pinned: false
   });
   const [creating, setCreating] = useState(false);
+
+  // Edit Modal State
+  const [editItem, setEditItem] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    title: '',
+    body: '',
+    audience: 'All',
+    pinned: false
+  });
+  const [updating, setUpdating] = useState(false);
 
   const isHR = user?.role === 'HR';
 
@@ -36,6 +46,34 @@ export default function Announcements() {
       }
     } finally {
       setCreating(false);
+    }
+  };
+
+  const openEditModal = (item) => {
+    setEditItem(item);
+    setEditFormData({
+      title: item.title,
+      body: item.body,
+      audience: item.audience || 'All',
+      pinned: !!item.pinned
+    });
+  };
+
+  const handleUpdateSubmit = async (e) => {
+    e.preventDefault();
+    if (!editItem) return;
+    setUpdating(true);
+    try {
+      const res = await dispatch(updateAnnouncement({
+        id: editItem._id,
+        data: editFormData
+      }));
+      if (!res.error) {
+        setEditItem(null);
+        dispatch(fetchAnnouncements({ page: 1, limit: 10 }));
+      }
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -94,13 +132,22 @@ export default function Announcements() {
                   </div>
                 </div>
                 {isHR && (
-                  <button
-                    className="btn btn-sm btn-outline-danger p-1 text-danger"
-                    title="Delete Announcement"
-                    onClick={() => handleDelete(a._id)}
-                  >
-                    <i className="bi bi-trash"></i>
-                  </button>
+                  <div className="d-flex align-items-center gap-1">
+                    <button
+                      className="btn btn-sm btn-outline-secondary py-1 px-2"
+                      title="Edit Announcement"
+                      onClick={() => openEditModal(a)}
+                    >
+                      <i className="bi bi-pencil"></i>
+                    </button>
+                    <button
+                      className="btn btn-sm btn-outline-danger py-1 px-2 text-danger"
+                      title="Delete Announcement"
+                      onClick={() => handleDelete(a._id)}
+                    >
+                      <i className="bi bi-trash"></i>
+                    </button>
+                  </div>
                 )}
               </div>
               <p className="text-secondary mb-0 small" style={{ whiteSpace: 'pre-line' }}>{a.body}</p>
@@ -177,6 +224,79 @@ export default function Announcements() {
                 <button type="submit" className="btn btn-primary d-flex align-items-center gap-2" disabled={creating}>
                   {creating && <span className="spinner-border spinner-border-sm" role="status"></span>}
                   <span>Publish Announcement</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Announcement Modal */}
+      {editItem && (
+        <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-flex justify-content-center align-items-center z-3 p-3">
+          <div className="card shadow-lg border-1 w-100" style={{ maxWidth: 520 }}>
+            <div className="p-3 border-bottom d-flex justify-content-between align-items-center">
+              <h6 className="fw-bold text-dark mb-0">Edit Announcement</h6>
+              <button className="btn btn-sm btn-link text-muted p-0" onClick={() => setEditItem(null)}>
+                <i className="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <form onSubmit={handleUpdateSubmit} className="p-3">
+              <div className="mb-3">
+                <label className="form-label" htmlFor="editAnnTitle">Title</label>
+                <input
+                  id="editAnnTitle"
+                  type="text"
+                  className="form-control"
+                  value={editFormData.title}
+                  onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="mb-3">
+                <label className="form-label" htmlFor="editAnnAudience">Target Audience</label>
+                <select
+                  id="editAnnAudience"
+                  className="form-select"
+                  value={editFormData.audience}
+                  onChange={(e) => setEditFormData({ ...editFormData, audience: e.target.value })}
+                >
+                  <option value="All">All Staff Members</option>
+                  <option value="Employee">Employees Only</option>
+                  <option value="Manager">Managers Only</option>
+                  <option value="HR">HR Team Only</option>
+                </select>
+              </div>
+              <div className="mb-3 form-check">
+                <input
+                  id="editAnnPin"
+                  type="checkbox"
+                  className="form-check-input"
+                  checked={editFormData.pinned}
+                  onChange={(e) => setEditFormData({ ...editFormData, pinned: e.target.checked })}
+                />
+                <label className="form-check-label small" htmlFor="editAnnPin">
+                  Pin this announcement to top of feed
+                </label>
+              </div>
+              <div className="mb-4">
+                <label className="form-label" htmlFor="editAnnBody">Message Body</label>
+                <textarea
+                  id="editAnnBody"
+                  className="form-control"
+                  rows="4"
+                  value={editFormData.body}
+                  onChange={(e) => setEditFormData({ ...editFormData, body: e.target.value })}
+                  required
+                ></textarea>
+              </div>
+              <div className="d-flex justify-content-end gap-2">
+                <button type="button" className="btn btn-outline-secondary" onClick={() => setEditItem(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary d-flex align-items-center gap-2" disabled={updating}>
+                  {updating && <span className="spinner-border spinner-border-sm" role="status"></span>}
+                  <span>Save Changes</span>
                 </button>
               </div>
             </form>

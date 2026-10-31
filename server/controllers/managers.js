@@ -5,6 +5,8 @@ const { body, query } = require('express-validator');
 const User = require('../models/User');
 const Manager = require('../models/Manager');
 const Employee = require('../models/Employee');
+const Attendance = require('../models/Attendance');
+const Training = require('../models/Training');
 const validate = require('../middleware/validate');
 const { verifyToken, authorize } = require('../middleware/auth');
 
@@ -12,7 +14,7 @@ const { verifyToken, authorize } = require('../middleware/auth');
 // MANAGER TEAM ENDPOINT (Manager View)
 // ==========================================
 
-// GET /api/managers/team (Manager views own team members)
+// GET /api/managers/team (Manager views own team members with performance metrics)
 router.get('/team', [verifyToken, authorize('Manager')], async (req, res, next) => {
   try {
     const manager = await Manager.findOne({ user: req.user._id });
@@ -28,9 +30,40 @@ router.get('/team', [verifyToken, authorize('Manager')], async (req, res, next) 
       .populate('user', 'name email role isActive')
       .lean();
 
+    const memberIds = team.map(m => m._id);
+    const [attendances, trainings] = await Promise.all([
+      Attendance.find({ employee: { $in: memberIds } }).select('employee status').lean(),
+      Training.find({ 'participants.employee': { $in: memberIds } }).select('participants').lean()
+    ]);
+
+    const teamWithMetrics = team.map(member => {
+      const memberAttendances = attendances.filter(a => a.employee.toString() === member._id.toString());
+      const totalDays = memberAttendances.length;
+      const presentDays = memberAttendances.filter(a => a.status === 'Present' || a.status === 'Late').length;
+      const attendanceRate = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 100;
+
+      let completedTrainings = 0;
+      let enrolledTrainings = 0;
+      trainings.forEach(t => {
+        t.participants?.forEach(p => {
+          if (p.employee?.toString() === member._id.toString()) {
+            enrolledTrainings++;
+            if (p.status === 'Completed') completedTrainings++;
+          }
+        });
+      });
+
+      return {
+        ...member,
+        attendanceRate,
+        completedTrainings,
+        enrolledTrainings
+      };
+    });
+
     res.status(200).json({
       success: true,
-      data: team
+      data: teamWithMetrics
     });
   } catch (err) {
     next(err);

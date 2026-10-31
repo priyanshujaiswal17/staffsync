@@ -59,7 +59,7 @@ export default function Attendance() {
 
   useEffect(() => {
     loadAttendance();
-  }, [page, monthFilter, statusFilter, search, user]);
+  }, [page, monthFilter, statusFilter, search, user, successMessage]);
 
   const columns = [
     ...(user?.role !== 'Employee' ? [

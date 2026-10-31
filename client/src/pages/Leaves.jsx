@@ -28,6 +28,16 @@ export default function Leaves() {
   const [reviewAction, setReviewAction] = useState('Approved');
   const [reviewLoading, setReviewLoading] = useState(false);
 
+  // HR all organization leaves state
+  const [allLeaves, setAllLeaves] = useState([]);
+  const [allLeavesLoading, setAllLeavesLoading] = useState(false);
+  const [allLeavesPage, setAllLeavesPage] = useState(1);
+  const [allLeavesPages, setAllLeavesPages] = useState(1);
+  const [allLeavesTotal, setAllLeavesTotal] = useState(0);
+  const [allStatusFilter, setAllStatusFilter] = useState('');
+  const [allDeptFilter, setAllDeptFilter] = useState('');
+  const [activeTab, setActiveTab] = useState(user?.role === 'HR' ? 'pending' : user?.role === 'Manager' ? 'pending' : 'my');
+
   const isReviewer = user?.role === 'Manager' || user?.role === 'HR';
 
   const loadPending = async () => {
@@ -41,10 +51,36 @@ export default function Leaves() {
     }
   };
 
+  const loadAllLeaves = async () => {
+    if (user?.role === 'HR') {
+      try {
+        setAllLeavesLoading(true);
+        const params = { page: allLeavesPage, limit: 10 };
+        if (allStatusFilter) params.status = allStatusFilter;
+        if (allDeptFilter) params.department = allDeptFilter;
+        const res = await api.get('/leaves', { params });
+        setAllLeaves(res.data.data || []);
+        setAllLeavesPage(res.data.page || 1);
+        setAllLeavesPages(res.data.pages || 1);
+        setAllLeavesTotal(res.data.total || 0);
+      } catch (err) {
+        // Handled silently
+      } finally {
+        setAllLeavesLoading(false);
+      }
+    }
+  };
+
   useEffect(() => {
     dispatch(fetchMyLeaves());
     loadPending();
   }, [dispatch, user]);
+
+  useEffect(() => {
+    if (user?.role === 'HR') {
+      loadAllLeaves();
+    }
+  }, [user, allLeavesPage, allStatusFilter, allDeptFilter]);
 
   const handleApplySubmit = async (e) => {
     e.preventDefault();
@@ -56,6 +92,7 @@ export default function Leaves() {
         setShowApplyModal(false);
         setApplyData({ type: 'Casual', startDate: '', endDate: '', reason: '' });
         dispatch(fetchMyLeaves());
+        if (user?.role === 'HR') loadAllLeaves();
       } else {
         setApplyError(res.payload);
       }
@@ -79,6 +116,7 @@ export default function Leaves() {
         setReviewModalLeave(null);
         setReviewNote('');
         loadPending();
+        if (user?.role === 'HR') loadAllLeaves();
         dispatch(fetchMyLeaves());
       }
     } catch (err) {
@@ -159,6 +197,71 @@ export default function Leaves() {
     }
   ];
 
+  const allColumns = [
+    {
+      header: 'Applicant',
+      render: (row) => (
+        <div>
+          <div className="fw-semibold text-dark">{row.employee?.user?.name || 'Staff Member'}</div>
+          <div className="text-muted" style={{ fontSize: 11 }}>{row.employee?.department} • {row.employee?.employeeId}</div>
+        </div>
+      )
+    },
+    { header: 'Type', render: (row) => <span className="fw-medium">{row.type}</span> },
+    {
+      header: 'Duration',
+      render: (row) => (
+        <span className="tabular-nums">
+          {new Date(row.startDate).toLocaleDateString()} &rarr; {new Date(row.endDate).toLocaleDateString()} ({row.days}d)
+        </span>
+      )
+    },
+    { header: 'Reason', render: (row) => <span className="text-secondary small text-truncate d-inline-block" style={{ maxWidth: 180 }}>{row.reason}</span> },
+    { header: 'Status', render: (row) => <StatusBadge status={row.status} /> },
+    {
+      header: 'Reviewer',
+      render: (row) => (
+        <span className="text-muted small">
+          {row.reviewedBy?.name ? `${row.reviewedBy.name}` : row.status === 'Pending' ? 'Pending' : '—'}
+        </span>
+      )
+    },
+    {
+      header: 'Action',
+      align: 'right',
+      render: (row) => (
+        row.status === 'Pending' ? (
+          <div className="d-flex justify-content-end gap-1">
+            <button
+              className="btn btn-sm btn-success py-0.5 px-2"
+              title="Approve"
+              onClick={() => {
+                setReviewModalLeave(row);
+                setReviewAction('Approved');
+                setReviewNote('');
+              }}
+            >
+              <i className="bi bi-check"></i>
+            </button>
+            <button
+              className="btn btn-sm btn-outline-danger py-0.5 px-2"
+              title="Reject"
+              onClick={() => {
+                setReviewModalLeave(row);
+                setReviewAction('Rejected');
+                setReviewNote('');
+              }}
+            >
+              <i className="bi bi-x"></i>
+            </button>
+          </div>
+        ) : (
+          <span className="text-muted small">—</span>
+        )
+      )
+    }
+  ];
+
   return (
     <div>
       <div className="page-header d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
@@ -182,9 +285,38 @@ export default function Leaves() {
         </div>
       )}
 
-      {/* Review Queue (for Managers and HR) */}
+      {/* Tabs navigation for Reviewers */}
       {isReviewer && (
-        <div className="mb-5">
+        <div className="d-flex gap-2 border-bottom pb-2 mb-4">
+          <button
+            className={`btn btn-sm ${activeTab === 'pending' ? 'btn-primary' : 'btn-light border'} d-flex align-items-center gap-2`}
+            onClick={() => setActiveTab('pending')}
+          >
+            <i className="bi bi-hourglass-split"></i>
+            <span>Pending Review Queue ({pendingList.length})</span>
+          </button>
+          {user?.role === 'HR' && (
+            <button
+              className={`btn btn-sm ${activeTab === 'all' ? 'btn-primary' : 'btn-light border'} d-flex align-items-center gap-2`}
+              onClick={() => setActiveTab('all')}
+            >
+              <i className="bi bi-building"></i>
+              <span>All Company Leaves ({allLeavesTotal})</span>
+            </button>
+          )}
+          <button
+            className={`btn btn-sm ${activeTab === 'my' ? 'btn-primary' : 'btn-light border'} d-flex align-items-center gap-2`}
+            onClick={() => setActiveTab('my')}
+          >
+            <i className="bi bi-person-badge"></i>
+            <span>My Applications ({total})</span>
+          </button>
+        </div>
+      )}
+
+      {/* Review Queue Tab */}
+      {isReviewer && activeTab === 'pending' && (
+        <div>
           <div className="d-flex align-items-center justify-content-between mb-3">
             <h6 className="fw-semibold text-dark mb-0">
               Pending Review Queue ({pendingList.length})
@@ -199,27 +331,80 @@ export default function Leaves() {
         </div>
       )}
 
-      {/* My Leave Requests Section */}
-      <div>
-        <div className="d-flex align-items-center justify-content-between mb-3">
-          <h6 className="fw-semibold text-dark mb-0">My Leave Applications</h6>
+      {/* All Leaves Tab for HR */}
+      {user?.role === 'HR' && activeTab === 'all' && (
+        <div>
+          <DataTable
+            columns={allColumns}
+            data={allLeaves}
+            loading={allLeavesLoading}
+            page={allLeavesPage}
+            pages={allLeavesPages}
+            total={allLeavesTotal}
+            onPageChange={setAllLeavesPage}
+            filterComponent={
+              <div className="d-flex align-items-center gap-2">
+                <select
+                  className="form-select form-select-sm"
+                  value={allDeptFilter}
+                  onChange={(e) => { setAllDeptFilter(e.target.value); setAllLeavesPage(1); }}
+                >
+                  <option value="">All Departments</option>
+                  <option value="Engineering">Engineering</option>
+                  <option value="Human Resources">Human Resources</option>
+                  <option value="Product & Design">Product & Design</option>
+                  <option value="Marketing">Marketing</option>
+                  <option value="Finance">Finance</option>
+                </select>
+                <select
+                  className="form-select form-select-sm"
+                  value={allStatusFilter}
+                  onChange={(e) => { setAllStatusFilter(e.target.value); setAllLeavesPage(1); }}
+                >
+                  <option value="">All Statuses</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Rejected">Rejected</option>
+                </select>
+                {(allDeptFilter || allStatusFilter) && (
+                  <button
+                    className="btn btn-sm btn-link text-muted p-0 text-decoration-none"
+                    onClick={() => { setAllDeptFilter(''); setAllStatusFilter(''); setAllLeavesPage(1); }}
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+            }
+            emptyTitle="No leaves found"
+            emptyMessage="No leave records matched your selected filters."
+          />
         </div>
-        <DataTable
-          columns={myColumns}
-          data={myLeaves}
-          loading={loading}
-          error={error}
-          onRetry={() => dispatch(fetchMyLeaves())}
-          page={page}
-          pages={pages}
-          total={total}
-          onPageChange={(p) => dispatch(fetchMyLeaves({ page: p }))}
-          emptyTitle="No leave applications yet"
-          emptyMessage="You have not submitted any leave requests."
-          emptyActionLabel="Apply for Leave"
-          onEmptyAction={() => setShowApplyModal(true)}
-        />
-      </div>
+      )}
+
+      {/* My Leave Requests Section */}
+      {(!isReviewer || activeTab === 'my') && (
+        <div>
+          <div className="d-flex align-items-center justify-content-between mb-3">
+            <h6 className="fw-semibold text-dark mb-0">My Leave Applications</h6>
+          </div>
+          <DataTable
+            columns={myColumns}
+            data={myLeaves}
+            loading={loading}
+            error={error}
+            onRetry={() => dispatch(fetchMyLeaves())}
+            page={page}
+            pages={pages}
+            total={total}
+            onPageChange={(p) => dispatch(fetchMyLeaves({ page: p }))}
+            emptyTitle="No leave applications yet"
+            emptyMessage="You have not submitted any leave requests."
+            emptyActionLabel="Apply for Leave"
+            onEmptyAction={() => setShowApplyModal(true)}
+          />
+        </div>
+      )}
 
       {/* Apply Leave Modal */}
       {showApplyModal && (

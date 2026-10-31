@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import api from '../api/axios';
-import { fetchTrainings, createTraining, updateTraining } from '../store/trainingsSlice';
+import { fetchTrainings, createTraining, updateTraining, deleteTraining } from '../store/trainingsSlice';
 import Skeleton from '../components/Skeleton';
 import StatusBadge from '../components/StatusBadge';
 import EmptyState from '../components/EmptyState';
@@ -27,14 +27,14 @@ export default function Trainings() {
   const [scoreModalTraining, setScoreModalTraining] = useState(null);
   const [participantScores, setParticipantScores] = useState([]);
 
-  const isManager = user?.role === 'Manager';
+  const isManager = user?.role === 'Manager' || user?.role === 'HR';
 
   useEffect(() => {
     dispatch(fetchTrainings());
-    if (isManager) {
+    if (user?.role === 'Manager') {
       api.get('/managers/team').then(res => setTeamMembers(res.data.data || []));
     }
-  }, [dispatch, isManager]);
+  }, [dispatch, user]);
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
@@ -48,6 +48,12 @@ export default function Trainings() {
       }
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDeleteTraining = async (id) => {
+    if (window.confirm('Are you sure you want to delete this training program?')) {
+      dispatch(deleteTraining(id));
     }
   };
 
@@ -99,43 +105,83 @@ export default function Trainings() {
         />
       ) : (
         <div className="row g-4">
-          {trainings.map((t) => (
-            <div key={t._id} className="col-12 col-lg-6">
-              <div className="card h-100 p-4 border-1 shadow-sm d-flex flex-column justify-content-between">
-                <div>
-                  <div className="d-flex justify-content-between align-items-start mb-2">
-                    <h5 className="fw-semibold text-dark fs-6 mb-0">{t.title}</h5>
-                    <span className="badge bg-light text-secondary border small">
-                      Trainer: {t.trainer}
-                    </span>
-                  </div>
-                  <p className="text-secondary small mb-3">{t.description}</p>
-                  <div className="small text-muted mb-3 d-flex gap-3">
-                    <span>
-                      <i className="bi bi-calendar3 me-1"></i>
-                      {new Date(t.startDate).toLocaleDateString()} &rarr; {new Date(t.endDate).toLocaleDateString()}
-                    </span>
-                    <span>
-                      <i className="bi bi-people me-1"></i>
-                      {t.participants?.length || 0} enrolled
-                    </span>
-                  </div>
-                </div>
+          {trainings.map((t) => {
+            const myEnrollment = t.participants?.find(
+              p => p.employee?.user?._id === user?._id || p.employee?._id === user?.profile?._id || p.employee?.user === user?._id
+            );
 
-                {isManager && (
-                  <div className="pt-3 border-top d-flex justify-content-between align-items-center">
-                    <span className="text-muted small">Created by You</span>
-                    <button
-                      className="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
-                      onClick={() => openScoreModal(t)}
-                    >
-                      <i className="bi bi-pencil-square"></i> Manage Scores & Status
-                    </button>
+            return (
+              <div key={t._id} className="col-12 col-lg-6">
+                <div className="card h-100 p-4 border-1 shadow-sm d-flex flex-column justify-content-between">
+                  <div>
+                    <div className="d-flex justify-content-between align-items-start mb-2">
+                      <h5 className="fw-semibold text-dark fs-6 mb-0">{t.title}</h5>
+                      <span className="badge bg-light text-secondary border small">
+                        Trainer: {t.trainer}
+                      </span>
+                    </div>
+                    <p className="text-secondary small mb-3">{t.description}</p>
+                    <div className="small text-muted mb-3 d-flex gap-3">
+                      <span>
+                        <i className="bi bi-calendar3 me-1"></i>
+                        {new Date(t.startDate).toLocaleDateString()} &rarr; {new Date(t.endDate).toLocaleDateString()}
+                      </span>
+                      <span>
+                        <i className="bi bi-people me-1"></i>
+                        {t.participants?.length || 0} enrolled
+                      </span>
+                    </div>
+
+                    {/* Employee Personal Enrollment & Performance Badge */}
+                    {user?.role === 'Employee' && (
+                      <div className="p-2.5 rounded bg-light border d-flex justify-content-between align-items-center mb-2">
+                        <span className="small text-dark fw-medium">
+                          <i className="bi bi-award me-1 text-primary"></i> Your Enrollment Status:
+                        </span>
+                        <div className="d-flex align-items-center gap-2">
+                          {myEnrollment ? (
+                            <>
+                              <StatusBadge status={myEnrollment.status || 'Enrolled'} />
+                              {myEnrollment.score !== undefined && myEnrollment.score > 0 && (
+                                <span className="badge bg-primary-subtle text-primary border border-primary-subtle small tabular-nums">
+                                  Score: {myEnrollment.score}/100
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <span className="badge bg-secondary-subtle text-secondary border small">Open for Team</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
+
+                  {isManager && (
+                    <div className="pt-3 border-top d-flex justify-content-between align-items-center">
+                      <span className="text-muted small">
+                        {t.createdBy?.name ? `By ${t.createdBy.name}` : 'StaffSync Program'}
+                      </span>
+                      <div className="d-flex align-items-center gap-2">
+                        <button
+                          className="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
+                          onClick={() => openScoreModal(t)}
+                        >
+                          <i className="bi bi-pencil-square"></i> Scores & Status
+                        </button>
+                        <button
+                          className="btn btn-sm btn-outline-danger py-1 px-2"
+                          title="Delete Program"
+                          onClick={() => handleDeleteTraining(t._id)}
+                        >
+                          <i className="bi bi-trash"></i>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

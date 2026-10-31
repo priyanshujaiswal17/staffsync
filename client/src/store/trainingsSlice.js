@@ -28,6 +28,15 @@ export const updateTraining = createAsyncThunk('trainings/update', async ({ id, 
   }
 });
 
+export const deleteTraining = createAsyncThunk('trainings/delete', async (id, { rejectWithValue }) => {
+  try {
+    await api.delete(`/trainings/${id}`);
+    return id;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || 'Failed to delete training');
+  }
+});
+
 const trainingsSlice = createSlice({
   name: 'trainings',
   initialState: {
@@ -59,6 +68,9 @@ const trainingsSlice = createSlice({
       .addCase(updateTraining.fulfilled, (state, action) => {
         const idx = state.items.findIndex(t => t._id === action.payload.data._id);
         if (idx !== -1) state.items[idx] = action.payload.data;
+      })
+      .addCase(deleteTraining.fulfilled, (state, action) => {
+        state.items = state.items.filter(t => t._id !== action.payload);
       });
   }
 });

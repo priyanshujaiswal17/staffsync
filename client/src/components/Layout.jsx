@@ -21,6 +21,17 @@ export default function Layout() {
     }
   }, [dispatch, user]);
 
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (!e.target.closest('.topbar')) {
+        setShowNotifMenu(false);
+        setShowUserMenu(false);
+      }
+    };
+    document.addEventListener('click', handleOutsideClick);
+    return () => document.removeEventListener('click', handleOutsideClick);
+  }, []);
+
   const handleLogout = () => {
     dispatch(logout());
     navigate('/login');
@@ -233,15 +244,13 @@ export default function Layout() {
                     <div className="fw-semibold small text-truncate">{user?.name}</div>
                     <div className="text-muted text-truncate" style={{ fontSize: 11 }}>{user?.email}</div>
                   </div>
-                  {user?.role === 'Employee' && (
-                    <NavLink
-                      to="/profile"
-                      className="dropdown-item px-3 py-2 small d-flex align-items-center gap-2"
-                      onClick={() => setShowUserMenu(false)}
-                    >
-                      <i className="bi bi-person"></i> Profile
-                    </NavLink>
-                  )}
+                  <NavLink
+                    to="/profile"
+                    className="dropdown-item px-3 py-2 small d-flex align-items-center gap-2"
+                    onClick={() => setShowUserMenu(false)}
+                  >
+                    <i className="bi bi-person"></i> My Profile
+                  </NavLink>
                   <button
                     className="dropdown-item px-3 py-2 small text-danger d-flex align-items-center gap-2"
                     onClick={handleLogout}

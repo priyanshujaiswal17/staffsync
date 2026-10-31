@@ -7,18 +7,19 @@ export default function Reports() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function loadReports() {
-      try {
-        setLoading(true);
-        const res = await api.get('/reports/dashboard');
-        setData(res.data.data);
-      } catch (err) {
-        // Handled silently
-      } finally {
-        setLoading(false);
-      }
+  const loadReports = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/reports/dashboard');
+      setData(res.data.data);
+    } catch (err) {
+      // Handled silently
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     loadReports();
   }, []);
 
@@ -32,10 +33,18 @@ export default function Reports() {
 
   return (
     <div>
-      <div className="page-header d-flex justify-content-between align-items-center mb-4">
+      <div className="page-header d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
         <div>
           <h4 className="fw-bold text-dark mb-1">Workforce Reports & Analytics</h4>
           <p className="text-secondary small mb-0">High-efficiency aggregation metrics covering attendance, headcount, leaves, and trainings.</p>
+        </div>
+        <div className="d-flex gap-2">
+          <button className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" onClick={loadReports}>
+            <i className="bi bi-arrow-clockwise"></i> Refresh
+          </button>
+          <button className="btn btn-sm btn-primary d-flex align-items-center gap-1" onClick={() => window.print()}>
+            <i className="bi bi-printer"></i> Print / Export
+          </button>
         </div>
       </div>
 

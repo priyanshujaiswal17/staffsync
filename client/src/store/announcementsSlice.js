@@ -28,6 +28,15 @@ export const deleteAnnouncement = createAsyncThunk('announcements/delete', async
   }
 });
 
+export const updateAnnouncement = createAsyncThunk('announcements/update', async ({ id, data }, { rejectWithValue }) => {
+  try {
+    const res = await api.put(`/announcements/${id}`, data);
+    return res.data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || 'Failed to update announcement');
+  }
+});
+
 const announcementsSlice = createSlice({
   name: 'announcements',
   initialState: {
@@ -55,6 +64,12 @@ const announcementsSlice = createSlice({
       })
       .addCase(createAnnouncement.fulfilled, (state, action) => {
         state.items.unshift(action.payload.data);
+      })
+      .addCase(updateAnnouncement.fulfilled, (state, action) => {
+        const idx = state.items.findIndex(a => a._id === action.payload.data._id);
+        if (idx !== -1) {
+          state.items[idx] = action.payload.data;
+        }
       })
       .addCase(deleteAnnouncement.fulfilled, (state, action) => {
         state.items = state.items.filter(a => a._id !== action.payload);

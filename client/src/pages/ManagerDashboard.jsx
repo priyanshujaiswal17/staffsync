@@ -15,10 +15,11 @@ export default function ManagerDashboard() {
   useEffect(() => {
     async function loadData() {
       try {
+        const todayStr = new Date().toISOString().slice(0, 10);
         const [teamRes, leavesRes, attRes, trainRes] = await Promise.all([
           api.get('/managers/team'),
           api.get('/leaves/pending'),
-          api.get('/attendance/team?limit=5'),
+          api.get(`/attendance/team?date=${todayStr}`),
           api.get('/trainings?limit=5')
         ]);
         setTeam(teamRes.data.data || []);
@@ -34,9 +35,7 @@ export default function ManagerDashboard() {
     loadData();
   }, []);
 
-  const teamPresentToday = teamAttendance.filter(a =>
-    a.date === new Date().toISOString().slice(0, 10) && ['Present', 'Late'].includes(a.status)
-  ).length;
+  const teamPresentToday = teamAttendance.filter(a => ['Present', 'Late'].includes(a.status)).length;
 
   if (loading) return <Skeleton type="table" count={4} />;
 

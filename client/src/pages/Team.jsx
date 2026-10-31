@@ -49,6 +49,29 @@ export default function Team() {
     { header: 'Department', accessor: 'department' },
     { header: 'Status', render: (row) => <StatusBadge status={row.status} /> },
     {
+      header: 'Attendance Rate',
+      render: (row) => (
+        <div className="d-flex align-items-center gap-2" style={{ minWidth: 100 }}>
+          <div className="progress flex-grow-1" style={{ height: 6 }}>
+            <div
+              className={`progress-bar ${(row.attendanceRate ?? 100) >= 80 ? 'bg-success' : (row.attendanceRate ?? 100) >= 60 ? 'bg-warning' : 'bg-danger'}`}
+              style={{ width: `${row.attendanceRate ?? 100}%` }}
+            ></div>
+          </div>
+          <span className="small tabular-nums fw-medium">{row.attendanceRate ?? 100}%</span>
+        </div>
+      )
+    },
+    {
+      header: 'Training Performance',
+      render: (row) => (
+        <span className="badge bg-light text-secondary border small">
+          <i className="bi bi-mortarboard me-1 text-primary"></i>
+          {row.completedTrainings || 0} / {row.enrolledTrainings || 0} Completed
+        </span>
+      )
+    },
+    {
       header: 'Leave Balance',
       render: (row) => (
         <span className="small tabular-nums text-muted">
