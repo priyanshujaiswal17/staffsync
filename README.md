@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
 
 # 🧑‍💼 StaffSync — Modern Human Resource Management System
 
@@ -54,6 +54,19 @@
 - Real-time notifications
 - Fully responsive Bootstrap 5 design
 - Zero-config startup — auto-seeds demo data, uses in-memory DB if MongoDB is offline
+
+---
+
+## 📸 Application Screenshots
+
+### Landing Page & Feature Showcase
+![StaffSync Landing Page](docs/screenshots/home.png)
+
+### Authentication & 1-Click Demo Access
+![StaffSync Login Page](docs/screenshots/login.png)
+
+### Employee Registration
+![StaffSync Register Page](docs/screenshots/register.png)
 
 ---
 
