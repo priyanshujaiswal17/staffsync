@@ -10,7 +10,7 @@ if (!fs.existsSync(OUT_DIR)) {
 }
 
 async function run() {
-  console.log('Launching browser...');
+  console.log('Launching Edge browser...');
   const browser = await puppeteer.launch({
     executablePath: EDGE_PATH,
     headless: 'new',
@@ -20,87 +20,72 @@ async function run() {
 
   const page = await browser.newPage();
 
-  // 1. Home Page
-  console.log('Capturing home page...');
+  // 1. Home Landing Page
+  console.log('1. Capturing Home landing page...');
   await page.goto('http://localhost:5173/', { waitUntil: 'networkidle0' });
+  await new Promise(r => setTimeout(r, 1000));
   await page.screenshot({ path: path.join(OUT_DIR, 'home.png'), fullPage: false });
+  console.log('Saved home.png (size: ' + fs.statSync(path.join(OUT_DIR, 'home.png')).size + ')');
 
   // 2. Login Page
-  console.log('Capturing login page...');
+  console.log('2. Capturing Login page...');
   await page.goto('http://localhost:5173/login', { waitUntil: 'networkidle0' });
+  await new Promise(r => setTimeout(r, 1000));
   await page.screenshot({ path: path.join(OUT_DIR, 'login.png'), fullPage: false });
+  console.log('Saved login.png (size: ' + fs.statSync(path.join(OUT_DIR, 'login.png')).size + ')');
 
   // 3. Register Page
-  console.log('Capturing register page...');
+  console.log('3. Capturing Register page...');
   await page.goto('http://localhost:5173/register', { waitUntil: 'networkidle0' });
   await new Promise(r => setTimeout(r, 1000));
   await page.screenshot({ path: path.join(OUT_DIR, 'register.png'), fullPage: false });
+  console.log('Saved register.png (size: ' + fs.statSync(path.join(OUT_DIR, 'register.png')).size + ')');
 
   // 4. HR Dashboard
-  console.log('Capturing HR dashboard...');
-  await page.goto('http://localhost:5173/login', { waitUntil: 'networkidle0' });
-  // Find HR quick demo button
-  const buttons = await page.$$('button');
-  for (const btn of buttons) {
-    const text = await page.evaluate(el => el.textContent, btn);
-    if (text.includes('HR Director')) {
-      await btn.click();
-      break;
-    }
-  }
-  await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 5000 }).catch(() => {});
-  await new Promise(r => setTimeout(r, 1500));
+  console.log('4. Logging in as HR and capturing HR dashboard...');
+  await page.goto('http://localhost:5173/login?demo=hr', { waitUntil: 'networkidle0' });
+  await page.waitForFunction(() => window.location.pathname === '/hr/dashboard', { timeout: 10000 });
+  await new Promise(r => setTimeout(r, 2000));
   await page.screenshot({ path: path.join(OUT_DIR, 'hr-dashboard.png'), fullPage: false });
+  console.log('Saved hr-dashboard.png (size: ' + fs.statSync(path.join(OUT_DIR, 'hr-dashboard.png')).size + ')');
 
   // 5. Manager Dashboard
-  console.log('Capturing Manager dashboard...');
+  console.log('5. Logging in as Manager and capturing Manager dashboard...');
   await page.evaluate(() => localStorage.clear());
-  await page.goto('http://localhost:5173/login', { waitUntil: 'networkidle0' });
-  const mgrButtons = await page.$$('button');
-  for (const btn of mgrButtons) {
-    const text = await page.evaluate(el => el.textContent, btn);
-    if (text.includes('Manager (Engineering)')) {
-      await btn.click();
-      break;
-    }
-  }
-  await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 5000 }).catch(() => {});
-  await new Promise(r => setTimeout(r, 1500));
+  await page.goto('http://localhost:5173/login?demo=manager', { waitUntil: 'networkidle0' });
+  await page.waitForFunction(() => window.location.pathname === '/manager/dashboard', { timeout: 10000 });
+  await new Promise(r => setTimeout(r, 2000));
   await page.screenshot({ path: path.join(OUT_DIR, 'manager-dashboard.png'), fullPage: false });
+  console.log('Saved manager-dashboard.png (size: ' + fs.statSync(path.join(OUT_DIR, 'manager-dashboard.png')).size + ')');
 
   // 6. Employee Dashboard
-  console.log('Capturing Employee dashboard...');
+  console.log('6. Logging in as Employee and capturing Employee dashboard...');
   await page.evaluate(() => localStorage.clear());
-  await page.goto('http://localhost:5173/login', { waitUntil: 'networkidle0' });
-  const empButtons = await page.$$('button');
-  for (const btn of empButtons) {
-    const text = await page.evaluate(el => el.textContent, btn);
-    if (text.includes('Employee (Frontend)')) {
-      await btn.click();
-      break;
-    }
-  }
-  await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 5000 }).catch(() => {});
-  await new Promise(r => setTimeout(r, 1500));
+  await page.goto('http://localhost:5173/login?demo=employee', { waitUntil: 'networkidle0' });
+  await page.waitForFunction(() => window.location.pathname === '/employee/dashboard', { timeout: 10000 });
+  await new Promise(r => setTimeout(r, 2000));
   await page.screenshot({ path: path.join(OUT_DIR, 'employee-dashboard.png'), fullPage: false });
+  console.log('Saved employee-dashboard.png (size: ' + fs.statSync(path.join(OUT_DIR, 'employee-dashboard.png')).size + ')');
 
-  // 7. Attendance page
-  console.log('Capturing Attendance page...');
+  // 7. Attendance Page (as Employee)
+  console.log('7. Navigating to Attendance page...');
   await page.goto('http://localhost:5173/attendance', { waitUntil: 'networkidle0' });
-  await new Promise(r => setTimeout(r, 1500));
+  await new Promise(r => setTimeout(r, 2000));
   await page.screenshot({ path: path.join(OUT_DIR, 'attendance.png'), fullPage: false });
+  console.log('Saved attendance.png (size: ' + fs.statSync(path.join(OUT_DIR, 'attendance.png')).size + ')');
 
-  // 8. Leaves page
-  console.log('Capturing Leaves page...');
+  // 8. Leaves Page (as Employee)
+  console.log('8. Navigating to Leaves page...');
   await page.goto('http://localhost:5173/leaves', { waitUntil: 'networkidle0' });
-  await new Promise(r => setTimeout(r, 1500));
+  await new Promise(r => setTimeout(r, 2000));
   await page.screenshot({ path: path.join(OUT_DIR, 'leaves.png'), fullPage: false });
+  console.log('Saved leaves.png (size: ' + fs.statSync(path.join(OUT_DIR, 'leaves.png')).size + ')');
 
   await browser.close();
-  console.log('All screenshots captured successfully in ' + OUT_DIR);
+  console.log('All screenshots captured successfully with distinct views!');
 }
 
 run().catch(err => {
-  console.error('Error capturing screenshots:', err);
+  console.error('Error during screenshot capture:', err);
   process.exit(1);
 });

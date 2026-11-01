@@ -421,7 +421,7 @@ staffsync/
 +-- AGENTS.md                   # AI agent build rules
 +-- LICENSE
 +-- README.md
-`
+```
 
 ---
 
@@ -534,12 +534,12 @@ CLIENT_URL=http://127.0.0.1:5173
 
 ### Scripts
 
-`ash
+```bash
 npm start          # Production server
 npm run dev        # Dev server with nodemon
 npm run seed       # Seed demo data
 npm test           # Run 25-assertion smoke tests
-`
+```
 
 ---
 
@@ -547,20 +547,20 @@ npm test           # Run 25-assertion smoke tests
 
 ### Installation
 
-`ash
+```bash
 cd staffsync/client
 npm install
 cp .env.example .env
 # VITE_API_URL=http://127.0.0.1:5000/api
-`
+```
 
 ### Scripts
 
-`ash
+```bash
 npm run dev       # Start Vite dev server on port 5173
 npm run build     # Build production bundle
 npm run preview   # Preview production build
-`
+```
 
 ---
 
@@ -584,47 +584,47 @@ StaffSync has three connection modes:
 ## Database Schemas and Models
 
 ### User Schema
-`js
+```javascript
 { name, email, passwordHash (hidden), role: HR|Manager|Employee, isActive }
-`
+```
 
 ### Employee Schema
-`js
+```javascript
 { user(ref), employeeId, department, designation, phone, address,
   dateOfBirth, joinDate, manager(ref), leaveBalance:{casual,sick,annual},
   status: Active|Inactive|Terminated }
 // Indexes: manager, department, status
-`
+```
 
 ### Attendance Schema
-`js
+```javascript
 { employee(ref), date:YYYY-MM-DD, checkIn, checkOut,
   status: Present|Late|Absent|On Leave }
 // Unique index: employee + date
-`
+```
 
 ### Leave Schema
-`js
+```javascript
 { employee(ref), type:Casual|Sick|Annual|Unpaid, startDate, endDate,
   days, reason, status:Pending|Approved|Rejected, reviewedBy, reviewNote }
-`
+```
 
 ### Training Schema
-`js
+```javascript
 { title, description, trainer, startDate, endDate, createdBy(ref),
   participants:[{ employee(ref), status:Enrolled|Completed, score }] }
-`
+```
 
 ### Announcement Schema
-`js
+```javascript
 { title, body, postedBy(ref:User), audience:All|HR|Manager|Employee, pinned }
-`
+```
 
 ### Notification Schema
-`js
+```javascript
 { user(ref:User), type, message, read:Boolean, link }
 // Index: user + read
-`
+```
 
 ---
 
@@ -696,7 +696,7 @@ StaffSync has three connection modes:
 ## Frontend Architecture
 
 ### Redux Store Structure
-`
+```
 auth         - user, token, login/logout/register thunks
 leaves       - myLeaves, allLeaves, teamLeaves, apply, review
 attendance   - myAttendance, teamAttendance, checkIn/checkOut
@@ -704,7 +704,7 @@ announcements - items, post, list (role-filtered)
 trainings    - items, create, update scores
 notifications - items, unreadCount, markAllRead
 employees    - items, pagination, CRUD
-`
+```
 
 ### Key Patterns
 - **ProtectedRoute**: Role-guard wrapper, redirects unauthenticated/wrong-role users
@@ -718,7 +718,7 @@ employees    - items, pagination, CRUD
 
 **No MongoDB required — auto-starts in-memory DB and seeds demo data!**
 
-`ash
+```bash
 # Terminal 1 - Backend
 cd staffsync/server
 npm install
