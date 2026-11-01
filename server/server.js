@@ -55,7 +55,17 @@ app.use(errorHandler);
 
 // Connect DB and start server
 if (process.env.NODE_ENV !== 'test') {
-  connectDB().then(() => {
+  connectDB().then(async () => {
+    try {
+      const User = require('./models/User');
+      const count = await User.countDocuments();
+      if (count === 0) {
+        const seed = require('./scripts/seed');
+        await seed({ disconnect: false });
+      }
+    } catch (seedErr) {
+      console.error(`Auto-seed warning: ${seedErr.message}`);
+    }
     app.listen(PORT, () => {
       console.log(`StaffSync Server running on port ${PORT}`);
     });

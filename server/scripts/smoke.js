@@ -1,4 +1,5 @@
 const dotenv = require('dotenv');
+process.env.NODE_ENV = 'test';
 dotenv.config();
 
 let serverInstance = null;
@@ -17,6 +18,11 @@ async function setup() {
   const app = require('../server');
   const connectDB = require('../config/db');
   await connectDB();
+  const User = require('../models/User');
+  if (await User.countDocuments() === 0) {
+    const seed = require('./seed');
+    await seed({ disconnect: false });
+  }
   const TEST_PORT = 5005;
   await new Promise((resolve) => {
     serverInstance = app.listen(TEST_PORT, () => resolve());

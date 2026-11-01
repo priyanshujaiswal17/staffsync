@@ -13,9 +13,11 @@ const Notification = require('../models/Notification');
 
 dotenv.config();
 
-const seed = async () => {
+const seed = async (options = { disconnect: true }) => {
   try {
-    await connectDB();
+    if (mongoose.connection.readyState !== 1) {
+      await connectDB();
+    }
 
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash('Password123', salt);
@@ -442,17 +444,27 @@ const seed = async () => {
     }
 
     console.log(`Seed completed: 2 HR/Admins, 2 Managers, 6 Employees across 4 departments, with Attendance, Leaves, Announcements, Trainings, and Notifications.`);
-    if (connectDB.disconnectDB) {
-      await connectDB.disconnectDB();
-    } else {
-      await mongoose.disconnect();
+    if (options && options.disconnect) {
+      if (connectDB.disconnectDB) {
+        await connectDB.disconnectDB();
+      } else {
+        await mongoose.disconnect();
+      }
+      process.exit(0);
     }
-    process.exit(0);
   } catch (err) {
     console.error('Seed error:', err.message);
-    process.exit(1);
+    if (options && options.disconnect) {
+      process.exit(1);
+    } else {
+      throw err;
+    }
   }
 };
 
-seed();
+if (require.main === module) {
+  seed({ disconnect: true });
+}
+
+module.exports = seed;
 
