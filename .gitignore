@@ -1,6 +1,47 @@
-node_modules
+﻿# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment files (NEVER commit secrets)
 .env
-dist
-build
-.DS_Store
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+*.suo
+*.user
+
+# Editor
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# MongoDB memory server binary cache
+.cache/
+mongodb-binaries/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Misc
+*.pid
+*.seed
