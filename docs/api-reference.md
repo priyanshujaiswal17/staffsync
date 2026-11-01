@@ -1,6 +1,6 @@
 # API Reference — StaffSync
 
-Base URL: `http://localhost:5000/api`
+Base URL: `/api` (or `http://127.0.0.1:5000/api`)
 
 All protected endpoints require: `Authorization: Bearer <JWT_TOKEN>`
 

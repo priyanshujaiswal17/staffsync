@@ -59,14 +59,29 @@
 
 ## 📸 Application Screenshots
 
-### Landing Page & Feature Showcase
+### 1. Landing Page & Product Overview
 ![StaffSync Landing Page](docs/screenshots/home.png)
 
-### Authentication & 1-Click Demo Access
+### 2. Authentication & 1-Click Demo Quick Access
 ![StaffSync Login Page](docs/screenshots/login.png)
 
-### Employee Registration
+### 3. Employee Self-Registration
 ![StaffSync Register Page](docs/screenshots/register.png)
+
+### 4. HR Analytics & Management Dashboard
+![StaffSync HR Dashboard](docs/screenshots/hr-dashboard.png)
+
+### 5. Manager Team & Training Dashboard
+![StaffSync Manager Dashboard](docs/screenshots/manager-dashboard.png)
+
+### 6. Employee Portal & Overview
+![StaffSync Employee Dashboard](docs/screenshots/employee-dashboard.png)
+
+### 7. Attendance Tracking & History
+![StaffSync Attendance](docs/screenshots/attendance.png)
+
+### 8. Leave Management & Approval System
+![StaffSync Leaves](docs/screenshots/leaves.png)
 
 ---
 
@@ -108,45 +123,39 @@
 
 ## 🏗️ Technical Architecture
 
-`
-+------------------------------------------------------------------+
-|                        CLIENT (React.js)                        |
-|  +------------+  +-------------+  +------------------------+    |
-|  |   Pages    |  |  Components |  |   Redux Store (RTK)   |    |
-|  | (14 pages) |  |  (Layout,   |  |  auth / leaves /      |    |
-|  |            |  |  DataTable, |  |  attendance /         |    |
-|  |            |  |  StatCard)  |  |  notifications / etc  |    |
-|  +------------+  +-------------+  +------------------------+    |
-|                     Axios API Client                            |
-|              (JWT interceptor, 401 handler)                     |
-+-----------------------------+------------------------------------+
-                              | HTTP / REST
-                              v
-+------------------------------------------------------------------+
-|                     SERVER (Express.js)                         |
-|  +----------------+  +----------------+  +------------------+   |
-|  |    Routes      |  |  Controllers   |  |   Middleware     |   |
-|  |  /api/auth     |  |  auth.js       |  |  verifyToken     |   |
-|  |  /api/employees|  |  employees.js  |  |  authorize(roles)|   |
-|  |  /api/managers |  |  managers.js   |  |  validate        |   |
-|  |  /api/attendance  |  attendance.js |  |  errorHandler    |   |
-|  |  /api/leaves   |  |  leaves.js     |  +------------------+   |
-|  |  /api/announce.|  |  announce.js   |                         |
-|  |  /api/trainings|  |  trainings.js  |                         |
-|  |  /api/notif.   |  |  notifications |                         |
-|  |  /api/reports  |  |  reports.js    |                         |
-|  +----------------+  +-------+--------+                         |
-+------------------------------------------+----------------------+
-                                           | Mongoose ODM
-                                           v
-+------------------------------------------------------------------+
-|                   DATABASE (MongoDB)                            |
-|  Users | Employees | Managers | Attendance | Leaves            |
-|  Announcements | Trainings | Notifications   (8 collections)   |
-|                                                                 |
-|  Fallback: MongoMemoryServer (auto if local DB offline)        |
-+------------------------------------------------------------------+
-`
+```mermaid
+flowchart TD
+    subgraph ClientLayer["🖥️ Frontend Client (React 18 + Vite)"]
+        UI["React SPA Pages & Components<br/>(Bootstrap 5.3 + Icons)"]
+        Router["React Router v6<br/>(ProtectedRoute & Role Guards)"]
+        Store["Redux Toolkit Store<br/>(auth, leaves, attendance, etc.)"]
+        Axios["Axios HTTP Client<br/>(JWT Bearer Interceptor & 401 Handler)"]
+        UI --> Router
+        Router --> Store
+        Store --> Axios
+    end
+
+    subgraph APILayer["⚙️ Backend Server (Node.js + Express)"]
+        Routes["Express REST API Router<br/>(/api/auth, /api/employees, etc.)"]
+        AuthMW["Auth & RBAC Middleware<br/>(verifyToken & authorize)"]
+        Validator["Input Validation<br/>(express-validator)"]
+        Controllers["Controller Handlers<br/>(Business Logic & MVC Controller)"]
+        Routes --> AuthMW
+        AuthMW --> Validator
+        Validator --> Controllers
+    end
+
+    subgraph DataLayer["💾 Database Layer (MongoDB & ODM)"]
+        Mongoose["Mongoose ODM Models<br/>(Schema Validation & Indexing)"]
+        DB[("MongoDB Database<br/>(8 Collections)")]
+        MemDB[("MongoMemoryServer<br/>(Zero-Config Dev Fallback)")]
+        Controllers --> Mongoose
+        Mongoose --> DB
+        Mongoose -.->|Fallback if Offline| MemDB
+    end
+
+    Axios ==>|HTTP / REST JSON| Routes
+```
 
 ### Tech Stack
 
@@ -170,46 +179,103 @@
 
 ## ER Diagram
 
-`
-+----------------+       +-----------------+       +--------------+
-|    USERS       | 1   1 |    EMPLOYEES    | N   1 |   MANAGERS   |
-+----------------+<------+-----------------+------>+--------------+
-| _id            |       | _id             |       | _id          |
-| name           |       | user  (ref)     |       | user  (ref)  |
-| email          |       | employeeId      |       | department   |
-| passwordHash   |       | department      |       | team[]       |
-| role           |       | designation     |       |  Employee ref|
-|  HR            |       | phone / address |       +--------------+
-|  Manager       |       | dateOfBirth     |
-|  Employee      |       | joinDate        |    +-------------------+
-| isActive       |       | manager (ref)   |    |    ATTENDANCE     |
-+----------------+       | leaveBalance    | N  +-------------------+
-                         |  casual:12      |<---| _id               |
-     +-----------+       |  sick:10        |    | employee  (ref)   |
-     |   LEAVES  |       |  annual:15      |    | date YYYY-MM-DD   |
-     +-----------+       | status          |    | checkIn/checkOut  |
-  N  | _id       |       |  Active/Inactive|    | status            |
- <---| employee  |       +-----------------+    |  Present/Late/... |
-     | type      |                              +-------------------+
-     |  Casual   |    +----------------------------------------------+
-     |  Sick     |    |               TRAININGS                      |
-     |  Annual   |    +----------------------------------------------+
-     |  Unpaid   |    | _id / title / description / trainer          |
-     | startDate |    | startDate / endDate / createdBy (ref: User)  |
-     | endDate   |    | participants []                               |
-     | days      |    |   { employee(ref), status, score }           |
-     | reason    |    +----------------------------------------------+
-     | status    |
-     |  Pending  |    +---------------------+  +-------------------+
-     |  Approved |    |    ANNOUNCEMENTS    |  |   NOTIFICATIONS   |
-     |  Rejected |    +---------------------+  +-------------------+
-     | reviewedBy|    | _id / title / body  |  | _id               |
-     | reviewNote|    | postedBy (ref: User)|  | user (ref: User)  |
-     +-----------+    | audience            |  | type / message    |
-                      |  All/HR/Manager/Emp |  | read Boolean      |
-                      | pinned Boolean      |  | link              |
-                      +---------------------+  +-------------------+
-`
+```mermaid
+erDiagram
+    USERS ||--o| EMPLOYEES : "has profile"
+    USERS ||--o| MANAGERS : "has manager profile"
+    MANAGERS ||--o{ EMPLOYEES : "manages team"
+    EMPLOYEES ||--o{ ATTENDANCE : "logs daily"
+    EMPLOYEES ||--o{ LEAVES : "submits"
+    USERS ||--o{ ANNOUNCEMENTS : "posts"
+    USERS ||--o{ NOTIFICATIONS : "receives"
+    USERS ||--o{ TRAININGS : "creates"
+    TRAININGS ||--o{ EMPLOYEES : "enrolls"
+
+    USERS {
+        ObjectId _id PK
+        string name
+        string email UK
+        string passwordHash
+        string role "HR | Manager | Employee"
+        boolean isActive
+        date createdAt
+    }
+
+    EMPLOYEES {
+        ObjectId _id PK
+        ObjectId user FK
+        string employeeId UK
+        string department
+        string designation
+        string phone
+        string address
+        date dateOfBirth
+        date joinDate
+        ObjectId manager FK
+        object leaveBalance "casual, sick, annual"
+        string status "Active | Inactive | Terminated"
+    }
+
+    MANAGERS {
+        ObjectId _id PK
+        ObjectId user FK
+        string department
+        array team "Employee ObjectIds"
+    }
+
+    ATTENDANCE {
+        ObjectId _id PK
+        ObjectId employee FK
+        string date "YYYY-MM-DD"
+        date checkIn
+        date checkOut
+        string status "Present | Late | Absent | On Leave"
+    }
+
+    LEAVES {
+        ObjectId _id PK
+        ObjectId employee FK
+        string type "Casual | Sick | Annual | Unpaid"
+        date startDate
+        date endDate
+        number days
+        string reason
+        string status "Pending | Approved | Rejected"
+        ObjectId reviewedBy FK
+        string reviewNote
+    }
+
+    ANNOUNCEMENTS {
+        ObjectId _id PK
+        string title
+        string body
+        ObjectId postedBy FK
+        string audience "All | HR | Manager | Employee"
+        boolean pinned
+        date createdAt
+    }
+
+    TRAININGS {
+        ObjectId _id PK
+        string title
+        string description
+        string trainer
+        date startDate
+        date endDate
+        ObjectId createdBy FK
+        array participants "employee, status, score"
+    }
+
+    NOTIFICATIONS {
+        ObjectId _id PK
+        ObjectId user FK
+        string type
+        string message
+        boolean read
+        string link
+        date createdAt
+    }
+```
 
 **Relationships:**
 - User 1:1 Employee (every Employee has one User account)
@@ -224,7 +290,37 @@
 
 ## MVC Pattern and Project Structure
 
-`
+### MVC Architectural Flow
+
+```mermaid
+flowchart LR
+    subgraph View["👁️ VIEW LAYER (React Frontend)"]
+        V1["React SPA Pages<br/>(14 Route Pages)"]
+        V2["Reusable Components<br/>(Layout, DataTable, StatCard)"]
+        V3["Redux Toolkit Store<br/>(7 State Slices)"]
+        V1 <--> V2
+        V1 <--> V3
+    end
+
+    subgraph Controller["🎮 CONTROLLER LAYER (Express API)"]
+        C1["Route Middlewares<br/>(verifyToken, authorize, validate)"]
+        C2["Controllers<br/>(auth, employees, leaves, etc.)"]
+        C1 --> C2
+    end
+
+    subgraph Model["📦 MODEL LAYER (Mongoose Schemas)"]
+        M1["Mongoose Models<br/>(8 Collections)"]
+        M2[("MongoDB Database /<br/>MemoryServer")]
+        M1 <--> M2
+    end
+
+    View <==>|Axios HTTP Requests & JWT| Controller
+    Controller <==>|Queries, Updates, Aggregations| Model
+```
+
+### Clean Directory Layout
+
+```text
 staffsync/
 |
 +-- server/                     # Express.js MVC Backend
@@ -365,46 +461,47 @@ staffsync/
 | View Leave Balance and Status | Own only |
 | Update Own Profile | Own only |
 | Read Announcements | Read-only |
-| View and Join Training Programs | Read + Enroll |
+| View and J## User Flow
 
----
+```mermaid
+flowchart TD
+    Start(["🌐 Visit StaffSync Web Application"]) --> Choice{"Authentication Action"}
 
-## User Flow
+    Choice -->|Sign In| Login["🔑 Login Portal<br/>(Email & Password or 1-Click Demo)"]
+    Choice -->|New Account| Register["📝 Employee Registration<br/>(Self-Service Account Creation)"]
+    Register --> Login
 
-`
-           +-------------+
-           | Visit Home  |
-           | :5173/      |
-           +------+------+
-                  |
-      +-----------+-----------+
-      |           |           |
-  +---+----+  +---+--+  +----+-----+
-  |Register|  | Login|  |1-Click   |
-  |Employee|  |      |  |Demo Btns |
-  +---+----+  +---+--+  +----+-----+
-      |           |           |
-      +-----------+-----------+
-                  | JWT Token Issued
-                  | Role Detected
-                  v
-       +--------------------+
-       | Role-based Redirect|
-       +----+----------+----+
-            |          |
-    +--------+    +----+------+    +----------+
-    |  HR    |    |  Manager  |    | Employee |
-    |/hr/    |    |/manager/  |    |/employee/|
-    |dashbrd |    |dashboard  |    |dashboard |
-    +---+----+    +----+------+    +----+-----+
-        |              |                |
-        v              v                v
-   /employees      /team           /attendance
-   /leaves         /leaves         /leaves
-   /announcements  /trainings      /announcements
-   /reports                        /trainings
-   /trainings                      /profile
-`
+    Login --> AuthCheck{"Authenticate JWT & Verify Role"}
+
+    AuthCheck -->|HR Role| HRDash["🏢 HR Executive Portal (/hr/dashboard)"]
+    AuthCheck -->|Manager Role| MgrDash["👔 Department Manager Portal (/manager/dashboard)"]
+    AuthCheck -->|Employee Role| EmpDash["👤 Employee Workspace (/employee/dashboard)"]
+
+    subgraph HRActions["HR Administrative Scope"]
+        HRDash --> HR1["👥 Manage Employees (Full CRUD & Status)"]
+        HRDash --> HR2["👔 Assign Managers & Department Teams"]
+        HRDash --> HR3["📊 Company-Wide Attendance Tracking"]
+        HRDash --> HR4["🏖️ Review & Process All Leave Requests"]
+        HRDash --> HR5["📢 Broadcast Company Announcements"]
+        HRDash --> HR6["📈 View Real-Time Reports & Analytics"]
+    end
+
+    subgraph MgrActions["Manager Team Scope"]
+        MgrDash --> M1["👥 View Direct Team Members"]
+        MgrDash --> M2["⏱️ Monitor Team Daily Attendance"]
+        MgrDash --> M3["✅ Approve / Reject Team Leave Requests"]
+        MgrDash --> M4["🎓 Manage Department Training Programs"]
+        MgrDash --> M5["📊 Track Employee Training Performance"]
+    end
+
+    subgraph EmpActions["Employee Self-Service Scope"]
+        EmpDash --> E1["⏱️ Daily Check-in / Check-out"]
+        EmpDash --> E2["🏖️ Apply for Leave & Track Balance"]
+        EmpDash --> E3["📢 View Company & Role Announcements"]
+        EmpDash --> E4["🎓 Participate in Training Programs"]
+        EmpDash --> E5["👤 Update Profile & Personal Info"]
+    end
+```
 
 ---
 
@@ -417,23 +514,23 @@ staffsync/
 
 ### Installation
 
-`ash
-git clone https://github.com/YOUR_USERNAME/staffsync.git
+```bash
+git clone https://github.com/priyanshujaiswal17/staffsync.git
 cd staffsync/server
 npm install
 cp .env.example .env
-# Edit .env with your values
-`
+# Edit .env with your configuration
+```
 
 ### Environment Variables (server/.env)
 
-`
+```env
 PORT=5000
 MONGO_URI=mongodb://127.0.0.1:27017/staffsync
 JWT_SECRET=your_super_secret_key_here
 JWT_EXPIRES_IN=7d
-CLIENT_URL=http://localhost:5173
-`
+CLIENT_URL=http://127.0.0.1:5173
+```
 
 ### Scripts
 
@@ -454,7 +551,7 @@ npm test           # Run 25-assertion smoke tests
 cd staffsync/client
 npm install
 cp .env.example .env
-# VITE_API_URL=http://localhost:5000/api
+# VITE_API_URL=http://127.0.0.1:5000/api
 `
 
 ### Scripts
@@ -632,10 +729,10 @@ node server.js
 cd staffsync/client
 npm install
 npm run dev
-# App running at http://localhost:5173
-`
+# App running on Vite dev port (e.g. port 5173)
+```
 
-Open http://localhost:5173 in your browser.
+Open your browser at the client development server port.
 
 ---
 
